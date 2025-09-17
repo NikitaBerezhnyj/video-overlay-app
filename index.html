@@ -1,49 +1,75 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Video Launcher</title>
-  </head>
 
-  <body>
+<head>
+  <meta charset="UTF-8" />
+  <title>Video Launcher</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <header class="header-container">
     <h1>Video Overlay Launcher</h1>
-    <button id="add">➕ Додати відео</button>
-    <button id="start">▶️ Старт</button>
-    <ul id="list"></ul>
+  </header>
+  <main class="main-container">
+    <div class="action-container">
+      <button id="add">➕ Додати відео</button>
+      <button id="start">▶️ Старт</button>
+    </div>
+    <div class="videos-container">
+      <ul id="list"></ul>
+      <h2 class="no-video-container">Немає обраних відео</h2>
+    </div>
+  </main>
 
-    <script>
+  <script>
+    const listEl = document.getElementById("list");
+    const startBtn = document.getElementById("start");
+
+    async function refreshList() {
+      const list = await window.api.getVideoList();
       const listEl = document.getElementById("list");
-      const startBtn = document.getElementById("start");
+      const noVideoEl = document.querySelector(".no-video-container");
 
-      async function refreshList() {
-        const list = await window.api.getVideoList();
-        listEl.innerHTML = "";
+      listEl.innerHTML = "";
+
+      if (list.length === 0) {
+        listEl.style.display = "none";
+        noVideoEl.style.display = "block";
+      } else {
+        listEl.style.display = "block";
+        noVideoEl.style.display = "none";
+
         list.forEach((video, i) => {
           const li = document.createElement("li");
           li.textContent = video + " ";
+
           const del = document.createElement("button");
           del.textContent = "❌";
           del.onclick = async () => {
             await window.api.deleteVideo(i);
             refreshList();
           };
+
           li.appendChild(del);
           listEl.appendChild(li);
         });
       }
+    }
 
-      document.getElementById("add").onclick = async () => {
-        await window.api.addVideo();
-        refreshList();
-      };
-
-      startBtn.onclick = async () => {
-        const res = await window.api.startVideo();
-        if (res === "started") startBtn.textContent = "⏹ Стоп";
-        if (res === "stopped") startBtn.textContent = "▶️ Старт";
-      };
-
+    document.getElementById("add").onclick = async () => {
+      await window.api.addVideo();
       refreshList();
-    </script>
-  </body>
+    };
+
+    startBtn.onclick = async () => {
+      const res = await window.api.startVideo();
+      if (res === "started") startBtn.textContent = "⏹ Стоп";
+      if (res === "stopped") startBtn.textContent = "▶️ Старт";
+    };
+
+    refreshList();
+  </script>
+</body>
+
 </html>

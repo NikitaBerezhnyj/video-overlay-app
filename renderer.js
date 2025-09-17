@@ -2,6 +2,7 @@ const { ipcRenderer } = require("electron");
 
 const videoListEl = document.getElementById("videoList");
 const addBtn = document.getElementById("addBtn");
+const startBtn = document.getElementById("startBtn");
 
 async function loadVideos() {
   const videos = await ipcRenderer.invoke("get-video-list");
@@ -10,14 +11,6 @@ async function loadVideos() {
     const li = document.createElement("li");
     li.textContent = video.split("/").pop();
 
-    const startBtn = document.createElement("button");
-    startBtn.textContent = "Старт";
-    startBtn.onclick = () => {
-      ipcRenderer.send("start-video", video);
-      startBtn.textContent =
-        startBtn.textContent === "Старт" ? "Стоп" : "Старт";
-    };
-
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "Видалити";
     deleteBtn.onclick = async () => {
@@ -25,7 +18,6 @@ async function loadVideos() {
       loadVideos();
     };
 
-    li.appendChild(startBtn);
     li.appendChild(deleteBtn);
     videoListEl.appendChild(li);
   });
@@ -36,8 +28,22 @@ addBtn.onclick = async () => {
   loadVideos();
 };
 
+startBtn.onclick = async () => {
+  const videos = await ipcRenderer.invoke("get-video-list");
+  if (videos.length === 0) return alert("Немає відео для відтворення");
+
+  if (startBtn.textContent === "Старт") {
+    const randomIndex = Math.floor(Math.random() * videos.length);
+    ipcRenderer.send("start-video", videos[randomIndex]);
+    startBtn.textContent = "Стоп";
+  } else {
+    ipcRenderer.send("stop-video");
+    startBtn.textContent = "Старт";
+  }
+};
+
 ipcRenderer.on("video-stopped", () => {
-  loadVideos();
+  startBtn.textContent = "Старт";
 });
 
 loadVideos();

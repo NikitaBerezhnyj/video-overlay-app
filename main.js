@@ -4,87 +4,100 @@ const fs = require("fs");
 
 let mainWindow;
 let videoWindow;
+const videosFile = path.join(__dirname, "videos.json");
+
+function ensureVideoFile() {
+  if (!fs.existsSync(videosFile)) {
+    fs.writeFileSync(videosFile, "[]", "utf-8");
+  }
+}
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 600,
     height: 400,
     webPreferences: {
-      preload: path.join(__dirname, "renderer.js"),
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
+      preload: path.join(__dirname, "preload.js")
+    }
   });
 
   mainWindow.loadFile("index.html");
 }
 
-function createVideoWindow(filePath) {
+function createVideoWindow(videoPath) {
   videoWindow = new BrowserWindow({
     width: 640,
     height: 360,
-    alwaysOnTop: true,
     frame: false,
-    transparent: false,
+    alwaysOnTop: true,
+    transparent: true,
+    resizable: true,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
+      preload: path.join(__dirname, "preload.js")
+    }
   });
 
-  videoWindow.loadFile("videoPlayer.html");
+  videoWindow.loadFile("video.html");
+
   videoWindow.webContents.on("did-finish-load", () => {
-    videoWindow.webContents.send("play-video", filePath);
+    videoWindow.webContents.send("play-video", videoPath);
   });
 
   videoWindow.on("closed", () => {
     videoWindow = null;
-    mainWindow.webContents.send("video-stopped");
   });
 }
 
 app.whenReady().then(() => {
+  ensureVideoFile();
   createMainWindow();
-});
 
-ipcMain.handle("get-video-list", () => {
-  const filePath = path.join(__dirname, "video.json");
-  if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, JSON.stringify([]));
-  return JSON.parse(fs.readFileSync(filePath));
-});
-
-ipcMain.handle("add-video", async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog({
-    properties: ["openFile"],
-    filters: [{ name: "Videos", extensions: ["mp4", "mov", "webm"] }],
+  ipcMain.handle("get-video-list", async () => {
+    try {
+      const data = fs.readFileSync(videosFile, "utf-8");
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
   });
 
-  if (!canceled) {
-    const videos = JSON.parse(
-      fs.readFileSync(path.join(__dirname, "video.json"))
-    );
-    videos.push(filePaths[0]);
-    fs.writeFileSync(
-      path.join(__dirname, "video.json"),
-      JSON.stringify(videos)
-    );
-    return videos;
-  }
-  return null;
+  ipcMain.handle("add-video", async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ["openFile"],
+      filters: [{ name: "Videos", extensions: ["mp4", "mov", "avi", "mkv"] }]
+    });
+    if (canceled || filePaths.length === 0) return null;
+
+    const list = JSON.parse(fs.readFileSync(videosFile, "utf-8"));
+    const videoPath = filePaths[0];
+    list.push(videoPath);
+    fs.writeFileSync(videosFile, JSON.stringify(list, null, 2), "utf-8");
+    return list;
+  });
+
+  ipcMain.handle("delete-video", async (_, index) => {
+    const list = JSON.parse(fs.readFileSync(videosFile, "utf-8"));
+    list.splice(index, 1);
+    fs.writeFileSync(videosFile, JSON.stringify(list, null, 2), "utf-8");
+    return list;
+  });
+
+  ipcMain.handle("start-video", async () => {
+    if (videoWindow) {
+      videoWindow.close();
+      videoWindow = null;
+      return "stopped";
+    }
+
+    const list = JSON.parse(fs.readFileSync(videosFile, "utf-8"));
+    if (list.length === 0) return "no-videos";
+
+    const randomVideo = list[Math.floor(Math.random() * list.length)];
+    createVideoWindow(randomVideo);
+    return "started";
+  });
 });
 
-ipcMain.handle("delete-video", (event, index) => {
-  const filePath = path.join(__dirname, "video.json");
-  const videos = JSON.parse(fs.readFileSync(filePath));
-  videos.splice(index, 1);
-  fs.writeFileSync(filePath, JSON.stringify(videos));
-  return videos;
-});
-
-ipcMain.on("start-video", (event, filePath) => {
-  if (!videoWindow) {
-    createVideoWindow(filePath);
-  } else {
-    videoWindow.close();
-  }
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
 });

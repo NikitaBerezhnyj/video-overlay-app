@@ -1,18 +1,49 @@
-<!DOCTYPE html>
-<html lang="uk">
-
-<head>
-    <meta charset="UTF-8">
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
     <title>Video Launcher</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
+  </head>
 
-<body>
-    <h1>Video Launcher</h1>
-    <button id="addBtn">Додати відео</button>
-    <ul id="videoList"></ul>
+  <body>
+    <h1>Video Overlay Launcher</h1>
+    <button id="add">➕ Додати відео</button>
+    <button id="start">▶️ Старт</button>
+    <ul id="list"></ul>
 
-    <script src="renderer.js"></script>
-</body>
+    <script>
+      const listEl = document.getElementById("list");
+      const startBtn = document.getElementById("start");
 
+      async function refreshList() {
+        const list = await window.api.getVideoList();
+        listEl.innerHTML = "";
+        list.forEach((video, i) => {
+          const li = document.createElement("li");
+          li.textContent = video + " ";
+          const del = document.createElement("button");
+          del.textContent = "❌";
+          del.onclick = async () => {
+            await window.api.deleteVideo(i);
+            refreshList();
+          };
+          li.appendChild(del);
+          listEl.appendChild(li);
+        });
+      }
+
+      document.getElementById("add").onclick = async () => {
+        await window.api.addVideo();
+        refreshList();
+      };
+
+      startBtn.onclick = async () => {
+        const res = await window.api.startVideo();
+        if (res === "started") startBtn.textContent = "⏹ Стоп";
+        if (res === "stopped") startBtn.textContent = "▶️ Старт";
+      };
+
+      refreshList();
+    </script>
+  </body>
 </html>

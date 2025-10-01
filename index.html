@@ -17,7 +17,7 @@
       <button id="start">▶️ Старт</button>
     </div>
     <div class="videos-container">
-      <ul id="list"></ul>
+      <div id="list" class="videos-grid"></div>
       <h2 class="no-video-container">Немає обраних відео</h2>
     </div>
   </main>
@@ -26,9 +26,26 @@
     const listEl = document.getElementById("list");
     const startBtn = document.getElementById("start");
 
+    function generateThumbnail(videoPath, callback) {
+      const video = document.createElement("video");
+      video.src = `file://${videoPath}`;
+      video.crossOrigin = "anonymous";
+      video.muted = true;
+      video.currentTime = 0.1;
+
+      video.addEventListener("loadeddata", () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth / 4;
+        canvas.height = video.videoHeight / 4;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        callback(canvas.toDataURL("image/png"));
+      });
+    }
+
     async function refreshList() {
       const list = await window.api.getVideoList();
-      const listEl = document.getElementById("list");
       const noVideoEl = document.querySelector(".no-video-container");
 
       listEl.innerHTML = "";
@@ -37,12 +54,23 @@
         listEl.style.display = "none";
         noVideoEl.style.display = "block";
       } else {
-        listEl.style.display = "block";
+        listEl.style.display = "grid";
         noVideoEl.style.display = "none";
 
         list.forEach((video, i) => {
-          const li = document.createElement("li");
-          li.textContent = video + " ";
+          const card = document.createElement("div");
+          card.className = "video-card";
+
+
+          const img = document.createElement("img");
+          img.className = "thumb";
+          generateThumbnail(video, (thumbnail) => {
+            img.src = thumbnail;
+          });
+
+          const title = document.createElement("p");
+          title.textContent = video.split(/[\\/]/).pop();
+
 
           const del = document.createElement("button");
           del.textContent = "❌";
@@ -51,8 +79,11 @@
             refreshList();
           };
 
-          li.appendChild(del);
-          listEl.appendChild(li);
+          card.appendChild(img);
+          card.appendChild(title);
+          card.appendChild(del);
+
+          listEl.appendChild(card);
         });
       }
     }

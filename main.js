@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -133,6 +133,8 @@ app.whenReady().then(() => {
     createVideoWindow(nextVideo);
   });
 });
+
+Menu.setApplicationMenu(null);
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

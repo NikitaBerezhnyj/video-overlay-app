@@ -16,8 +16,10 @@ function ensureVideoFile() {
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 600,
-    height: 400,
+    width: 1200,
+    height: 800,
+    minWidth: 600,
+    minHeight: 600,
     webPreferences: {
       preload: path.join(__dirname, "preload.js")
     }
@@ -39,35 +41,37 @@ function getRandomVideo(excludePath = null) {
 }
 
 function createVideoWindow(videoPath) {
-  if (videoWindow) {
-    videoWindow.close();
-  }
+  if (!videoWindow) {
+    videoWindow = new BrowserWindow({
+      width: 640,
+      height: 360,
+      frame: false,
+      alwaysOnTop: true,
+      transparent: true,
+      resizable: true,
+      movable: true,
+      minimizable: false,
+      maximizable: false,
+      webPreferences: {
+        preload: path.join(__dirname, "preload.js")
+      }
+    });
 
-  videoWindow = new BrowserWindow({
-    width: 640,
-    height: 360,
-    frame: false,
-    alwaysOnTop: true,
-    transparent: true,
-    resizable: true,
-    movable: true,
-    minimizable: false,
-    maximizable: false,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js")
+    videoWindow.loadFile("video.html");
+
+    videoWindow.on("closed", () => {
+      videoWindow = null;
+      isPlaying = false;
+    });
+
+    videoWindow.webContents.once("did-finish-load", () => {
+      if (videoPath) videoWindow.webContents.send("play-video", videoPath);
+    });
+  } else {
+    if (videoWindow.webContents) {
+      videoWindow.webContents.send("play-video", videoPath);
     }
-  });
-
-  videoWindow.loadFile("video.html");
-
-  videoWindow.webContents.on("did-finish-load", () => {
-    videoWindow.webContents.send("play-video", videoPath);
-  });
-
-  videoWindow.on("closed", () => {
-    videoWindow = null;
-    isPlaying = false;
-  });
+  }
 }
 
 app.whenReady().then(() => {
@@ -104,24 +108,23 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("start-video", async () => {
-    if (isPlaying && videoWindow) {
-      videoWindow.close();
-      videoWindow = null;
-      isPlaying = false;
-      return "stopped";
-    }
-
     const list = JSON.parse(fs.readFileSync(videosFile, "utf-8"));
     if (list.length === 0) return "no-videos";
 
-    const randomVideo = getRandomVideo();
-    isPlaying = true;
-    createVideoWindow(randomVideo);
-    return "started";
+    if (!isPlaying) {
+      const randomVideo = getRandomVideo();
+      isPlaying = true;
+      createVideoWindow(randomVideo);
+      return "started";
+    } else {
+      isPlaying = false;
+      if (videoWindow) videoWindow.close();
+      return "stopped";
+    }
   });
 
   ipcMain.handle("next-video", async (_, currentVideoPath) => {
-    if (!isPlaying) return;
+    if (!isPlaying || !videoWindow) return;
 
     const list = JSON.parse(fs.readFileSync(videosFile, "utf-8"));
     if (list.length === 0) {
@@ -130,6 +133,7 @@ app.whenReady().then(() => {
     }
 
     const nextVideo = getRandomVideo(currentVideoPath);
+
     createVideoWindow(nextVideo);
   });
 });

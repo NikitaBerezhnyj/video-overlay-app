@@ -3,104 +3,55 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Video Launcher</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>VOR</title>
+  <link rel="stylesheet" href="styles/index.css">
 </head>
 
 <body>
   <header class="header-container">
-    <h1>Video Overlay Launcher</h1>
-  </header>
-  <main class="main-container">
-    <div class="action-container">
-      <button id="add">➕ Додати відео</button>
-      <button id="start">▶️ Старт</button>
+    <div class="header-content">
+      <div class="header-title">
+        <div class="logo">🎬</div>
+        <h1>Video Overlay Runner</h1>
+      </div>
+      <div class="header-status">
+        <span id="videoCountStatus">0 відео</span>
+      </div>
     </div>
+  </header>
+
+  <main class="main-container">
+    <aside class="action-container">
+      <div class="action-group">
+        <span class="action-label">Керування</span>
+        <button id="add">
+          <span>➕</span>
+          <span>Додати відео</span>
+        </button>
+        <button id="start">
+          <span>▶️</span>
+          <span>Запустити</span>
+        </button>
+      </div>
+    </aside>
+
     <div class="videos-container">
-      <div id="list" class="videos-grid"></div>
-      <h2 class="no-video-container">Немає обраних відео</h2>
+      <div class="videos-header">
+        <h2>Мої відео</h2>
+        <span class="video-count" id="videoCount">0 відео</span>
+      </div>
+      <div class="videos-content">
+        <div id="list" class="videos-grid"></div>
+        <div class="no-video-container" style="display: none;">
+          <div class="no-video-icon">📹</div>
+          <h2>Немає відео</h2>
+          <p>Натисніть "Додати відео", щоб почати</p>
+        </div>
+      </div>
     </div>
   </main>
 
-  <script>
-    const listEl = document.getElementById("list");
-    const startBtn = document.getElementById("start");
-
-    function generateThumbnail(videoPath, callback) {
-      const video = document.createElement("video");
-      video.src = `file://${videoPath}`;
-      video.crossOrigin = "anonymous";
-      video.muted = true;
-      video.currentTime = 0.1;
-
-      video.addEventListener("loadeddata", () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth / 4;
-        canvas.height = video.videoHeight / 4;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        callback(canvas.toDataURL("image/png"));
-      });
-    }
-
-    async function refreshList() {
-      const list = await window.api.getVideoList();
-      const noVideoEl = document.querySelector(".no-video-container");
-
-      listEl.innerHTML = "";
-
-      if (list.length === 0) {
-        listEl.style.display = "none";
-        noVideoEl.style.display = "block";
-      } else {
-        listEl.style.display = "grid";
-        noVideoEl.style.display = "none";
-
-        list.forEach((video, i) => {
-          const card = document.createElement("div");
-          card.className = "video-card";
-
-
-          const img = document.createElement("img");
-          img.className = "thumb";
-          generateThumbnail(video, (thumbnail) => {
-            img.src = thumbnail;
-          });
-
-          const title = document.createElement("p");
-          title.textContent = video.split(/[\\/]/).pop();
-
-
-          const del = document.createElement("button");
-          del.textContent = "❌";
-          del.onclick = async () => {
-            await window.api.deleteVideo(i);
-            refreshList();
-          };
-
-          card.appendChild(img);
-          card.appendChild(title);
-          card.appendChild(del);
-
-          listEl.appendChild(card);
-        });
-      }
-    }
-
-    document.getElementById("add").onclick = async () => {
-      await window.api.addVideo();
-      refreshList();
-    };
-
-    startBtn.onclick = async () => {
-      const res = await window.api.startVideo();
-      if (res === "started") startBtn.textContent = "⏹ Стоп";
-      if (res === "stopped") startBtn.textContent = "▶️ Старт";
-    };
-
-    refreshList();
-  </script>
+  <script src="scripts/index.js"></script>
 </body>
 
 </html>

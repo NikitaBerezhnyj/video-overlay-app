@@ -4,62 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Video Player</title>
-  <style>
-    body,
-    html {
-      margin: 0;
-      padding: 0;
-      background: transparent;
-      overflow: hidden;
-      width: 100%;
-      height: 100%;
-    }
-
-    #drag-region {
-      -webkit-app-region: drag;
-      width: 100%;
-      height: 30px;
-      background: rgba(0, 0, 0, 0.3);
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 10;
-      cursor: move;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(5px);
-    }
-
-    #drag-region:hover {
-      background: rgba(0, 0, 0, 0.5);
-    }
-
-    #drag-hint {
-      color: white;
-      font-size: 12px;
-      font-family: Arial, sans-serif;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-      pointer-events: none;
-    }
-
-    #video-container {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.8);
-    }
-
-    video {
-      max-width: 100%;
-      max-height: 100%;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-  </style>
+  <link rel="stylesheet" href="styles/video.css">
 </head>
 
 <body>
@@ -69,32 +14,7 @@
   <div id="video-container">
     <video id="player" autoplay muted></video>
   </div>
-  <script>
-    const player = document.getElementById("player");
-    let currentVideoPath = null;
-
-    window.api.onPlayVideo(videoPath => {
-      currentVideoPath = videoPath;
-      player.src = `file://${videoPath}`;
-      player.play();
-    });
-
-    player.onended = async () => {
-      await window.api.nextVideo(currentVideoPath);
-    };
-
-    let hintShown = true;
-    document.addEventListener('mousemove', () => {
-      if (hintShown) {
-        const hint = document.getElementById('drag-hint');
-        setTimeout(() => {
-          hint.style.opacity = '0';
-          hint.style.transition = 'opacity 0.5s';
-        }, 2000);
-        hintShown = false;
-      }
-    }, { once: true });
-  </script>
+  <script src="scripts/video.js"></script>
 </body>
 
 </html>
